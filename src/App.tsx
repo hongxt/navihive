@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import type { FormEvent } from 'react';
 import { NavigationClient } from './API/client';
 import { MockNavigationClient } from './API/mock';
 import { Site, Group } from './API/http';
@@ -65,6 +66,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import SearchIcon from '@mui/icons-material/Search';
 
 // 根据环境选择使用真实API还是模拟API
 const isDevEnvironment = import.meta.env.DEV;
@@ -111,6 +113,12 @@ const DEFAULT_CONFIGS = {
   'site.iconApi': 'https://www.faviconextractor.com/favicon/{domain}?larger=true', // 默认使用的API接口，带上 ?larger=true 参数可以获取最大尺寸的图标
 };
 
+const SEARCH_ENGINES = [
+  { key: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd={query}' },
+  { key: 'google', name: 'Google', url: 'https://www.google.com/search?q={query}' },
+  { key: 'bing', name: 'Bing', url: 'https://www.bing.com/search?q={query}' },
+];
+
 function App() {
   // 主题模式状态
   const [darkMode, setDarkMode] = useState(() => {
@@ -143,6 +151,13 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>(SortMode.None);
   const [currentSortingGroupId, setCurrentSortingGroupId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchEngine, setSearchEngine] = useState(() => {
+    const savedSearchEngine = localStorage.getItem('searchEngine');
+    return savedSearchEngine && SEARCH_ENGINES.some((engine) => engine.key === savedSearchEngine)
+      ? savedSearchEngine
+      : SEARCH_ENGINES[0].key;
+  });
 
   // 新增认证状态
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -213,6 +228,20 @@ function App() {
 
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
+  };
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const keyword = searchQuery.trim();
+    if (!keyword) return;
+
+    const engine =
+      SEARCH_ENGINES.find((searchEngineItem) => searchEngineItem.key === searchEngine) ||
+      SEARCH_ENGINES[0];
+    const searchUrl = engine.url.replace('{query}', encodeURIComponent(keyword));
+
+    window.open(searchUrl, '_blank', 'noopener,noreferrer');
   };
 
   // 检查认证状态
@@ -1126,6 +1155,68 @@ function App() {
               <ThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
             </Stack>
           </Box>
+
+          <Paper
+            component='form'
+            onSubmit={handleSearchSubmit}
+            elevation={2}
+            sx={{
+              mb: 4,
+              p: { xs: 1, sm: 1.5 },
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              flexDirection: { xs: 'column', sm: 'row' },
+              borderRadius: 3,
+              backgroundColor: (theme) =>
+                theme.palette.mode === 'dark'
+                  ? 'rgba(33, 33, 33, 0.95)'
+                  : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(5px)',
+            }}
+          >
+            <TextField
+              select
+              size='small'
+              label='搜索引擎'
+              value={searchEngine}
+              onChange={(event) => {
+                const selectedEngine = event.target.value;
+                setSearchEngine(selectedEngine);
+                localStorage.setItem('searchEngine', selectedEngine);
+              }}
+              sx={{
+                width: { xs: '100%', sm: 140 },
+                flexShrink: 0,
+              }}
+            >
+              {SEARCH_ENGINES.map((engine) => (
+                <MenuItem key={engine.key} value={engine.key}>
+                  {engine.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              size='small'
+              fullWidth
+              placeholder='输入关键词后按 Enter 搜索'
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              inputProps={{ 'aria-label': '搜索关键词' }}
+            />
+            <Button
+              type='submit'
+              variant='contained'
+              startIcon={<SearchIcon />}
+              disabled={!searchQuery.trim()}
+              sx={{
+                width: { xs: '100%', sm: 'auto' },
+                flexShrink: 0,
+              }}
+            >
+              搜索
+            </Button>
+          </Paper>
 
           {loading && (
             <Box
