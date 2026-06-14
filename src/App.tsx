@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { NavigationClient } from './API/client';
-import { MockNavigationClient } from './API/mock';
+import { LocalNavigationClient } from './API/local';
 import { Site, Group } from './API/http';
 import { GroupWithSites } from './types';
 import ThemeToggle from './components/ThemeToggle';
@@ -68,14 +68,14 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import SearchIcon from '@mui/icons-material/Search';
 
-// 根据环境选择使用真实API还是模拟API
+// 默认使用浏览器本地存储，显式启用时才连接真实 API
 const isDevEnvironment = import.meta.env.DEV;
 const useRealApi = import.meta.env.VITE_USE_REAL_API === 'true';
 
 const api =
-  isDevEnvironment && !useRealApi
-    ? new MockNavigationClient()
-    : new NavigationClient(isDevEnvironment ? 'http://localhost:8788/api' : '/api');
+  useRealApi
+    ? new NavigationClient(isDevEnvironment ? 'http://localhost:8788/api' : '/api')
+    : new LocalNavigationClient();
 
 // 排序模式枚举
 enum SortMode {
